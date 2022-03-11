@@ -28,6 +28,13 @@ instance Show LispVal where show = showVal
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
 
+eval :: LispVal -> LispVal
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Bool _) = val
+eval (List [Atom "quote", val]) = val
+eval val = val
+
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
@@ -69,10 +76,10 @@ parseQuoted = do
   x <- parseExpr
   return $ List [Atom "quote", x]
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err -> "No match: " ++ show err
-  Right val -> "Found value " ++ show val
+  Left err -> String $ "No match: " ++ show err
+  Right val -> val
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
@@ -86,5 +93,4 @@ parseExpr = parseAtom
 
 someFunc :: IO ()
 someFunc = do
-  (expr:_) <- getArgs
-  putStrLn (readExpr expr)
+  getArgs >>= print . eval . readExpr . head
