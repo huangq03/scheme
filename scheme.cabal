@@ -26,6 +26,13 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Parsers.AtomParser
+      Parsers.Helpers
+      Parsers.LispVal
+      Parsers.MainParsers
+      Parsers.MiscParsers
+      Parsers.NumberParser
+      Parsers.StringParser
   other-modules:
       Paths_scheme
   hs-source-dirs:
