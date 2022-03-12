@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       Parsers.AtomParser
+      Parsers.Helpers
       Parsers.LispVal
       Parsers.MainParsers
       Parsers.MiscParsers
