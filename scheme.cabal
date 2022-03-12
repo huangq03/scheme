@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Parsers.LispVal
   other-modules:
       Paths_scheme
   hs-source-dirs:
