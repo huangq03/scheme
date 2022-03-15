@@ -1,5 +1,7 @@
 module Parsers.Helpers
 ( eval
+, car
+, cdr
 )
 where
 import Control.Monad.Except
@@ -85,3 +87,16 @@ unpackStr notString  = throwError $ TypeMismatch "string" notString
 unpackBool :: LispVal -> ThrowsError Bool
 unpackBool (Bool b) = return b
 unpackBool notBool  = throwError $ TypeMismatch "boolean" notBool
+
+car :: [LispVal] -> ThrowsError LispVal
+car [List (x : _)]         = return x
+car [DottedList (x : _) _] = return x
+car [badArg]               = throwError $ TypeMismatch "pair" badArg
+car badArgList             = throwError $ NumArgs 1 badArgList
+
+cdr :: [LispVal] -> ThrowsError LispVal
+cdr [List (_ : xs)]         = return $ List xs
+cdr [DottedList [_]  x]     = return $ x
+cdr [DottedList (_ : xs) x] = return $ DottedList xs x
+cdr [badArg]                = throwError $ TypeMismatch "pair" badArg
+cdr badArgList              = throwError $ NumArgs 1 badArgList
