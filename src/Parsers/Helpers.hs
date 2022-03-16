@@ -2,6 +2,7 @@ module Parsers.Helpers
 ( eval
 , car
 , cdr
+, cons
 )
 where
 import Control.Monad.Except
@@ -100,3 +101,10 @@ cdr [DottedList [_]  x]     = return $ x
 cdr [DottedList (_ : xs) x] = return $ DottedList xs x
 cdr [badArg]                = throwError $ TypeMismatch "pair" badArg
 cdr badArgList              = throwError $ NumArgs 1 badArgList
+
+cons :: [LispVal] -> ThrowsError LispVal
+cons [x1, List []] = return $ List [x1]
+cons [x, List xs] = return $ List $ x : xs
+cons [x, DottedList xs xlast] = return $ DottedList (x : xs) xlast
+cons [x1, x2] = return $ DottedList [x1] x2
+cons badArgList = throwError $ NumArgs 2 badArgList
