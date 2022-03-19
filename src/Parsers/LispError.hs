@@ -3,6 +3,9 @@ module Parsers.LispError
 , ThrowsError
 , trapError
 , extractValue
+, IOThrowsError
+, liftThrows
+, runIOThrows
 )
 where
 import Text.Parsec hiding (spaces)
@@ -38,3 +41,12 @@ trapError action = catchError action (return . show)
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
 extractValue _ = error "extractValue exception: This shouldn't have happened. Oops."
+
+type IOThrowsError = ExceptT LispError IO
+
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err) = throwError err
+liftThrows (Right val) = return val
+
+runIOThrows :: IOThrowsError String -> IO String
+runIOThrows action = runExceptT (trapError action) >>= return . extractValue
