@@ -28,7 +28,6 @@ library
       Lib
       Parsers.AtomParser
       Parsers.Helpers
-      Parsers.LispError
       Parsers.LispVal
       Parsers.MainParsers
       Parsers.MiscParsers

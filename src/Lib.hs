@@ -4,9 +4,7 @@ module Lib
 import Text.Parsec hiding (spaces)
 import System.Environment
 import System.IO
-
 import Parsers.LispVal
-import Parsers.LispError
 import Control.Monad.Except
 import Parsers.MainParsers
 

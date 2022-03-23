@@ -13,7 +13,7 @@ import Parsers.MiscParsers
 import Parsers.AtomParser (parseAtom)
 import Parsers.StringParser (parseString)
 import Parsers.NumberParser (parseNumber)
-import Parsers.Helpers (eval, Env, nullEnv)
+import Parsers.Helpers (eval, nullEnv)
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom

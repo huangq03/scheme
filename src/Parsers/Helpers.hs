@@ -1,7 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Parsers.Helpers
 ( eval
-, Env
 , nullEnv
 , isBound
 , getVar
@@ -13,7 +12,6 @@ where
 import Control.Monad.Except
 import Data.IORef
 import Parsers.LispVal
-import Parsers.LispError
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
 eval _ val@(String _) = return val
@@ -69,7 +67,7 @@ primitives = [("+", numericBinop (+)),
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _            [] = throwError $ NumArgs 2 []
 numericBinop _ singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params        = mapM unpackNum params >>= return . Number . foldl1 op 
+numericBinop op params'      = mapM unpackNum params' >>= return . Number . foldl1 op 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpacker op args = if length args /= 2
@@ -157,8 +155,6 @@ equal [arg1, arg2] = do
       eqvEquals <- eqv [arg1, arg2]
       return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
-
-type Env = IORef [(String, IORef LispVal)]
 
 nullEnv :: IO Env
 nullEnv = newIORef []
