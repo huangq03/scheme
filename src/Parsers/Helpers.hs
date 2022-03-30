@@ -1,12 +1,12 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Parsers.Helpers
 ( eval
-, nullEnv
 , isBound
 , getVar
 , setVar
 , defineVar
 , bindVars
+, primitiveBindings
 )
 where
 import Control.Monad.Except
@@ -203,3 +203,7 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings  >>= newIORef
     where extendEnv bindings' env = liftM (++ env) (mapM addBinding bindings')
           addBinding (var, value) = do ref <- newIORef value
                                        return (var, ref)
+
+primitiveBindings :: IO Env
+primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitives)
+    where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)

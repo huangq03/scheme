@@ -2,7 +2,7 @@ module Parsers.MainParsers
 ( parseExpr
 , eval
 , Env
-, nullEnv
+, primitiveBindings
 )
 where
 import Control.Monad
@@ -13,7 +13,7 @@ import Parsers.MiscParsers
 import Parsers.AtomParser (parseAtom)
 import Parsers.StringParser (parseString)
 import Parsers.NumberParser (parseNumber)
-import Parsers.Helpers (eval, nullEnv)
+import Parsers.Helpers (eval, primitiveBindings)
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
