@@ -4,9 +4,7 @@ module Lib
 import Text.Parsec hiding (spaces)
 import System.Environment
 import System.IO
-
 import Parsers.LispVal
-import Parsers.LispError
 import Control.Monad.Except
 import Parsers.MainParsers
 
@@ -35,10 +33,10 @@ until_ pred' prompt action = do
       else action result >> until_ pred' prompt action
 
 runOne :: String -> IO ()
-runOne expr = nullEnv >>= flip evalAndPrint expr
+runOne expr = primitiveBindings >>= flip evalAndPrint expr
 
 runRepl :: IO ()
-runRepl = nullEnv >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
+runRepl = primitiveBindings >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
 
 someFunc :: IO ()
 someFunc = do args <- getArgs

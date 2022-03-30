@@ -1,19 +1,17 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Parsers.Helpers
 ( eval
-, Env
-, nullEnv
 , isBound
 , getVar
 , setVar
 , defineVar
 , bindVars
+, primitiveBindings
 )
 where
 import Control.Monad.Except
 import Data.IORef
 import Parsers.LispVal
-import Parsers.LispError
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
 eval _ val@(String _) = return val
@@ -30,13 +28,33 @@ eval env (List[Atom "set!", Atom var, form]) =
      eval env form >>= setVar env var
 eval env (List[Atom "define", Atom var, form]) =
      eval env form >>= defineVar env var
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+eval env (List (Atom "define" : List (Atom var : params) : body)) =
+     makeNormalFunc env params body >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) =
+     makeVarArgs varargs env params body >>= defineVar env var
+eval env (List (Atom "lambda" : List params : body)) =
+     makeNormalFunc env params body
+eval env (List (Atom "lambda" : DottedList params varargs : body)) =
+     makeVarArgs varargs env params body
+eval env (List (function : args)) = do
+     func <-  eval env function
+     argVars <- mapM (eval env) args
+     apply func argVars
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [LispVal] -> ThrowsError LispVal
-apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func)
-                        ($ args)
-                        (lookup func primitives)
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params' varargs body' closure') args =
+      if num params' /= num args && varargs == Nothing
+         then throwError $ NumArgs (num params') args
+         else (liftIO $ bindVars closure' $ zip params' args) >>= bindVarArgs varargs >>= evalBody
+      where remainingArgs = drop (length params') args
+            num = toInteger . length
+            evalBody env = liftM last $ mapM (eval env) body'
+            bindVarArgs arg env = case arg of
+                Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
+                Nothing -> return env
+apply nonFunc _ = throwError $ NotFunction "Unsupported function type" (show nonFunc)
 
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [("+", numericBinop (+)),
@@ -69,7 +87,7 @@ primitives = [("+", numericBinop (+)),
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _            [] = throwError $ NumArgs 2 []
 numericBinop _ singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params        = mapM unpackNum params >>= return . Number . foldl1 op 
+numericBinop op params'      = mapM unpackNum params' >>= return . Number . foldl1 op 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpacker op args = if length args /= 2
@@ -158,8 +176,6 @@ equal [arg1, arg2] = do
       return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
 
-type Env = IORef [(String, IORef LispVal)]
-
 nullEnv :: IO Env
 nullEnv = newIORef []
 
@@ -195,3 +211,16 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings  >>= newIORef
     where extendEnv bindings' env = liftM (++ env) (mapM addBinding bindings')
           addBinding (var, value) = do ref <- newIORef value
                                        return (var, ref)
+
+primitiveBindings :: IO Env
+primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitives)
+    where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
+
+makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
+makeFunc varargs env params body = return $ Func (map show params) varargs body env
+
+makeNormalFunc :: Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
+makeNormalFunc = makeFunc Nothing
+
+makeVarArgs :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
+makeVarArgs = makeFunc . Just . show
