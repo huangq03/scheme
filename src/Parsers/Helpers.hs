@@ -28,13 +28,25 @@ eval env (List[Atom "set!", Atom var, form]) =
      eval env form >>= setVar env var
 eval env (List[Atom "define", Atom var, form]) =
      eval env form >>= defineVar env var
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+eval env (List (function : args)) = do
+     func <-  eval env function
+     argVars <- mapM (eval env) args
+     apply func argVars
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [LispVal] -> ThrowsError LispVal
-apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func)
-                        ($ args)
-                        (lookup func primitives)
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params' varargs body' closure') args =
+      if num params' /= num args && varargs == Nothing
+         then throwError $ NumArgs (num params') args
+         else (liftIO $ bindVars closure' $ zip params' args) >>= bindVarArgs varargs >>= evalBody
+      where remainingArgs = drop (length params') args
+            num = toInteger . length
+            evalBody env = liftM last $ mapM (eval env) body'
+            bindVarArgs arg env = case arg of
+                Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
+                Nothing -> return env
+apply nonFunc _ = throwError $ NotFunction "Unsupported function type" (show nonFunc)
 
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [("+", numericBinop (+)),
