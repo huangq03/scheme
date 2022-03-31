@@ -28,14 +28,14 @@ eval env (List[Atom "set!", Atom var, form]) =
      eval env form >>= setVar env var
 eval env (List[Atom "define", Atom var, form]) =
      eval env form >>= defineVar env var
-eval env (List (Atom "define" : List (Atom var : params) : body)) =
-     makeNormalFunc env params body >>= defineVar env var
-eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) =
-     makeVarArgs varargs env params body >>= defineVar env var
-eval env (List (Atom "lambda" : List params : body)) =
-     makeNormalFunc env params body
-eval env (List (Atom "lambda" : DottedList params varargs : body)) =
-     makeVarArgs varargs env params body
+eval env (List (Atom "define" : List (Atom var : params') : body')) =
+     makeNormalFunc env params' body' >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : params') varargs : body')) =
+     makeVarArgs varargs env params' body' >>= defineVar env var
+eval env (List (Atom "lambda" : List params' : body')) =
+     makeNormalFunc env params' body'
+eval env (List (Atom "lambda" : DottedList params' varargs : body')) =
+     makeVarArgs varargs env params' body'
 eval env (List (function : args)) = do
      func <-  eval env function
      argVars <- mapM (eval env) args
@@ -217,7 +217,7 @@ primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitive
     where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
 
 makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
-makeFunc varargs env params body = return $ Func (map show params) varargs body env
+makeFunc varargs env params' body' = return $ Func (map show params') varargs body' env
 
 makeNormalFunc :: Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeNormalFunc = makeFunc Nothing
