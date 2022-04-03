@@ -232,7 +232,9 @@ makeVarArgs = makeFunc . Just . show
 ioPrimitives :: [(String, [LispVal] -> IOThrowsError LispVal)]
 ioPrimitives = [("apply", applyProc),
                 ("open-input-file", makePort ReadMode),
-                ("open-output-file", makePort WriteMode)]
+                ("open-output-file", makePort WriteMode),
+                ("close-input-port", closePort),
+                ("close-output-port", closePort)]
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
@@ -242,3 +244,7 @@ applyProc badForm = throwError $ NotFunction "Unsupported function type" (show b
 makePort :: IOMode -> [LispVal] -> IOThrowsError LispVal
 makePort mode [String filename] = liftM Port $ liftIO $ openFile filename mode
 makePort _ badVar= throwError $ Default $ "Bad form for makePort" ++ show badVar
+
+closePort :: [LispVal] -> IOThrowsError LispVal
+closePort [Port port] = liftIO $ hClose port >> (return $ Bool True)
+closePort _           = return $ Bool True
