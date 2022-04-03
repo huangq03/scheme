@@ -69,7 +69,8 @@ ioPrimitives = [("apply", applyProc),
                 ("close-output-port", closePort),
                 ("read", readProc),
                 ("write", writeProc),
-                ("read-contents", readContents)]
+                ("read-contents", readContents),
+                ("read-all", readAll)]
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
@@ -97,3 +98,10 @@ writeProc badVar = throwError $ Default $ "Bad var for writeProc" ++ show badVar
 readContents :: [LispVal] -> IOThrowsError LispVal
 readContents [String filename] = liftM String $ liftIO $ readFile filename
 readContents badVar            = throwError $ Default $ "Bad var for readContents" ++ show badVar
+
+load :: String -> IOThrowsError [LispVal]
+load filename = (liftIO $ readFile filename) >>= liftThrows . readExprList
+
+readAll :: [LispVal] -> IOThrowsError LispVal
+readAll [String filename] = liftM List $ load filename
+readAll badVar            = throwError $ Default $ "Bad var for readAll" ++ show badVar
