@@ -129,6 +129,8 @@ eval env (List (Atom "lambda" : List params' : body')) =
      makeNormalFunc env params' body'
 eval env (List (Atom "lambda" : DottedList params' varargs : body')) =
      makeVarArgs varargs env params' body'
+eval env (List [Atom "load", String filename]) = do
+     load filename >>= liftM last . mapM (eval env)
 eval env (List (function : args)) = do
      func <-  eval env function
      argVars <- mapM (eval env) args
@@ -147,5 +149,6 @@ apply (Func params' varargs body' closure') args =
             bindVarArgs arg env = case arg of
                 Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
                 Nothing -> return env
+
 apply (IOFunc func) args = func args
 apply nonFunc _ = throwError $ NotFunction "Unsupported function type" (show nonFunc)
