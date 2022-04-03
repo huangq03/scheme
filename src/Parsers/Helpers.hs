@@ -214,8 +214,9 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings  >>= newIORef
                                        return (var, ref)
 
 primitiveBindings :: IO Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitives)
-    where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' IOFunc) ioPrimitives
+                                               ++ map (makeFunc' PrimitiveFunc) primitives)
+    where makeFunc' constructor (var, func) = (var, constructor func)
 
 makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeFunc varargs env params' body' = return $ Func (map show params') varargs body' env
@@ -225,3 +226,11 @@ makeNormalFunc = makeFunc Nothing
 
 makeVarArgs :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeVarArgs = makeFunc . Just . show
+
+ioPrimitives :: [(String, [LispVal] -> IOThrowsError LispVal)]
+ioPrimitives = [("apply", applyProc)]
+
+applyProc :: [LispVal] -> IOThrowsError LispVal
+applyProc [func, List args] = apply func args
+applyProc (func : args) = apply func args
+applyProc badForm = throwError $ NotFunction "Unsupported function type" (show badForm)
