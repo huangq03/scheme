@@ -5,6 +5,7 @@ module Parsers.MainParsers
 , primitiveBindings
 , readExpr
 , readExprList
+, bindVars
 )
 where
 import Control.Monad
