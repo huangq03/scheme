@@ -6,13 +6,13 @@ module Parsers.Helpers
 , setVar
 , defineVar
 , bindVars
-, primitiveBindings
+, nullEnv
+, primitives
+, apply
 )
 where
 import Control.Monad.Except
 import Data.IORef
-import GHC.IO.IOMode
-import System.IO
 import Parsers.LispVal
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
@@ -215,11 +215,6 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings  >>= newIORef
           addBinding (var, value) = do ref <- newIORef value
                                        return (var, ref)
 
-primitiveBindings :: IO Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc' IOFunc) ioPrimitives
-                                               ++ map (makeFunc' PrimitiveFunc) primitives)
-    where makeFunc' constructor (var, func) = (var, constructor func)
-
 makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeFunc varargs env params' body' = return $ Func (map show params') varargs body' env
 
@@ -228,23 +223,3 @@ makeNormalFunc = makeFunc Nothing
 
 makeVarArgs :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeVarArgs = makeFunc . Just . show
-
-ioPrimitives :: [(String, [LispVal] -> IOThrowsError LispVal)]
-ioPrimitives = [("apply", applyProc),
-                ("open-input-file", makePort ReadMode),
-                ("open-output-file", makePort WriteMode),
-                ("close-input-port", closePort),
-                ("close-output-port", closePort)]
-
-applyProc :: [LispVal] -> IOThrowsError LispVal
-applyProc [func, List args] = apply func args
-applyProc (func : args) = apply func args
-applyProc badForm = throwError $ NotFunction "Unsupported function type" (show badForm)
-
-makePort :: IOMode -> [LispVal] -> IOThrowsError LispVal
-makePort mode [String filename] = liftM Port $ liftIO $ openFile filename mode
-makePort _ badVar= throwError $ Default $ "Bad form for makePort" ++ show badVar
-
-closePort :: [LispVal] -> IOThrowsError LispVal
-closePort [Port port] = liftIO $ hClose port >> (return $ Bool True)
-closePort _           = return $ Bool True
