@@ -68,7 +68,8 @@ ioPrimitives = [("apply", applyProc),
                 ("close-input-port", closePort),
                 ("close-output-port", closePort),
                 ("read", readProc),
-                ("write", writeProc)]
+                ("write", writeProc),
+                ("read-contents", readContents)]
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
@@ -92,3 +93,7 @@ writeProc :: [LispVal] -> IOThrowsError LispVal
 writeProc [obj]            = writeProc [obj, Port stdout]
 writeProc [obj, Port port] = (liftIO $ hPrint port obj) >> (return $ Bool True)
 writeProc badVar = throwError $ Default $ "Bad var for writeProc" ++ show badVar
+
+readContents :: [LispVal] -> IOThrowsError LispVal
+readContents [String filename] = liftM String $ liftIO $ readFile filename
+readContents badVar            = throwError $ Default $ "Bad var for readContents" ++ show badVar
